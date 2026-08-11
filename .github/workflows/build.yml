@@ -29,10 +29,23 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Deploy and Packaging using PySide6 Android Tool
+    - name: Download PySide6 Android Wheels
       run: |
-        pyside6-android-deploy --name "AuraQR" --package-node "com.auraway.auraqr" --wheel-pyside-target "PySide6"
-      continue-on-error: true
+        mkdir wheels
+        pip download PySide6 shiboken6 \
+          --platform android_21_arm64_v8a \
+          --only-binary=:all: \
+          --no-deps \
+          -d wheels
+
+    - name: Package Android APK
+      run: |
+        PYSIDE_WHEEL=$(ls wheels/PySide6*.whl | head -n 1)
+        SHIBOKEN_WHEEL=$(ls wheels/shiboken6*.whl | head -n 1)
+        pyside6-android-deploy \
+          --name "AuraQR" \
+          --wheel-pyside "$PYSIDE_WHEEL" \
+          --wheel-shiboken "$SHIBOKEN_WHEEL"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
