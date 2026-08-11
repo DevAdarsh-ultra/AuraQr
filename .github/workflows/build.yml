@@ -27,20 +27,33 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install PySide6==6.8.0 shiboken6==6.8.0 qtpy qrcode pillow
+        pip install PySide6==6.7.2 shiboken6==6.7.2 qtpy qrcode pillow
 
-    - name: Download Android Wheels
+    - name: Download Official Qt Android Wheels
       run: |
         mkdir -p wheels
-        wget -q https://github.com/EchterAlsFake/PySide6-to-Android/releases/download/v6.8.0/PySide6-6.8.0-cp311-cp311-android_aarch64.whl -O wheels/PySide6-android.whl
-        wget -q https://github.com/EchterAlsFake/PySide6-to-Android/releases/download/v6.8.0/shiboken6-6.8.0-cp311-cp311-android_aarch64.whl -O wheels/shiboken6-android.whl
+        pip download PySide6==6.7.2 shiboken6==6.7.2 \
+          --index-url https://download.qt.io/official_releases/QtForPython/ \
+          --platform android_21_arm64_v8a \
+          --only-binary=:all: \
+          --no-deps \
+          -d wheels || true
+
+        # Fallback to direct curl if pip download flags fail on platform resolution
+        if [ -z "$(ls -A wheels)" ]; then
+          curl -fL "https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.7.2-tp1-cp311-cp311-android_aarch64.whl" -o wheels/PySide6-android.whl
+          curl -fL "https://download.qt.io/official_releases/QtForPython/shiboken6/shiboken6-6.7.2-tp1-cp311-cp311-android_aarch64.whl" -o wheels/shiboken6-android.whl
+        fi
 
     - name: Package Android APK
       run: |
+        PYSIDE_WHEEL=$(ls wheels/PySide6*.whl | head -n 1)
+        SHIBOKEN_WHEEL=$(ls wheels/shiboken6*.whl | head -n 1)
+        
         pyside6-android-deploy \
           --name "AuraQR" \
-          --wheel-pyside wheels/PySide6-android.whl \
-          --wheel-shiboken wheels/shiboken6-android.whl \
+          --wheel-pyside "$PYSIDE_WHEEL" \
+          --wheel-shiboken "$SHIBOKEN_WHEEL" \
           --ndk-path "$ANDROID_NDK_LATEST_HOME" \
           --sdk-path "$ANDROID_HOME"
 
