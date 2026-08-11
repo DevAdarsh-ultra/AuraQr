@@ -24,38 +24,32 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install dependencies
+    - name: Install Host PySide6 Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install PySide6==6.7.2 shiboken6==6.7.2 qtpy qrcode pillow
+        pip install PySide6==6.8.0 shiboken6==6.8.0 qtpy qrcode pillow
 
-    - name: Download Official Qt Android Wheels
+    - name: Clone Qt for Python Setup Tools
       run: |
-        mkdir -p wheels
-        pip download PySide6==6.7.2 shiboken6==6.7.2 \
-          --index-url https://download.qt.io/official_releases/QtForPython/ \
-          --platform android_21_arm64_v8a \
-          --only-binary=:all: \
-          --no-deps \
-          -d wheels || true
+        git clone https://code.qt.io/pyside/pyside-setup.git --branch 6.8 --depth 1
 
-        # Fallback to direct curl if pip download flags fail on platform resolution
-        if [ -z "$(ls -A wheels)" ]; then
-          curl -fL "https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.7.2-tp1-cp311-cp311-android_aarch64.whl" -o wheels/PySide6-android.whl
-          curl -fL "https://download.qt.io/official_releases/QtForPython/shiboken6/shiboken6-6.7.2-tp1-cp311-cp311-android_aarch64.whl" -o wheels/shiboken6-android.whl
-        fi
+    - name: Download Android NDK and SDK via Qt Script
+      run: |
+        cd pyside-setup
+        pip install -r requirements.txt
+        pip install -r tools/cross_compile_android/requirements.txt
+        python tools/cross_compile_android/main.py --download-only --auto-accept-license
+
+    - name: Initialize pysidedeploy.spec
+      run: |
+        pyside6-android-deploy --init
 
     - name: Package Android APK
       run: |
-        PYSIDE_WHEEL=$(ls wheels/PySide6*.whl | head -n 1)
-        SHIBOKEN_WHEEL=$(ls wheels/shiboken6*.whl | head -n 1)
-        
         pyside6-android-deploy \
           --name "AuraQR" \
-          --wheel-pyside "$PYSIDE_WHEEL" \
-          --wheel-shiboken "$SHIBOKEN_WHEEL" \
-          --ndk-path "$ANDROID_NDK_LATEST_HOME" \
-          --sdk-path "$ANDROID_HOME"
+          --ndk-path "$HOME/.pyside6_android_deploy/android-ndk-r26b" \
+          --sdk-path "$HOME/.pyside6_android_deploy/android-sdk"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
