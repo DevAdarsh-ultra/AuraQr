@@ -24,11 +24,6 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Set up Android NDK
-      uses: nbdime/setup-android-ndk@v1
-      with:
-        ndk-version: r25c
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -40,25 +35,6 @@ jobs:
         wget -q https://github.com/EchterAlsFake/PySide6-to-Android/releases/download/v6.8.0/PySide6-6.8.0-cp311-cp311-android_aarch64.whl -O wheels/PySide6-android.whl
         wget -q https://github.com/EchterAlsFake/PySide6-to-Android/releases/download/v6.8.0/shiboken6-6.8.0-cp311-cp311-android_aarch64.whl -O wheels/shiboken6-android.whl
 
-    - name: Generate pysidedeploy.spec
-      run: |
-        pyside6-android-deploy --init
-
-    - name: Package Android APK
-      run: |
-        pyside6-android-deploy \
-          --name "AuraQR" \
-          --wheel-pyside wheels/PySide6-android.whl \
-          --wheel-shiboken wheels/shiboken6-android.whl \
-          --ndk-path "$ANDROID_NDK_HOME" \
-          --sdk-path "$ANDROID_HOME"
-
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: AuraQR-Android-APK
-        path: "**.apk"
-        
     - name: Package Android APK
       run: |
         pyside6-android-deploy \
